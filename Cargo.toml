@@ -15,3 +15,4 @@ gtk = { version="0.9", optional=true }
 gdk = { version="0.13", optional=true }
 xcb = { version="0.9", optional=true, features = [ "res" ] }
 anyhow = "1"
+notify-rust = "4"

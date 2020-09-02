@@ -1,5 +1,7 @@
 use anyhow::Result;
 
+use notify_rust::{Notification, Timeout};
+
 pub fn x11() -> Result<()> {
     let (cn, screen) = xcb::Connection::connect(None)?;
     let screen = cn
@@ -71,10 +73,39 @@ pub fn x11() -> Result<()> {
             if ev.target() == targets {
                 respond(&cn, &ev, xcb::ATOM_ATOM, 32, &[utf8_string])?;
             } else if ev.target() == utf8_string || ev.target() == text_plain {
-                respond(&cn, &ev, ev.target(), 8, b"Hello world")?;
-                break;
+                let mut action = None;
+
+                Notification::new()
+                    .summary("Clip Otp")
+                    .body(&format!(
+                        "Share password in clipboard with\n{:?} ({:?})",
+                        get_client_process_name(&cn, ev.requestor())?,
+                        String::from_utf8_lossy(name.value())
+                    ))
+                    .icon("dialog-password")
+                    .sound_name("window-attention-active")
+                    .urgency(notify_rust::Urgency::Critical)
+                    .timeout(Timeout::Never)
+                    .action("share", "Share")
+                    .action("clear", "Clear")
+                    .show()?
+                    .wait_for_action(|a| action = Some(a.to_owned()));
+
+                let action = action.as_ref().map(|s| &s[..]);
+                match action {
+                    Some("share") => {
+                        respond(&cn, &ev, ev.target(), 8, b"Hello world")?;
+                        break;
+                    }
+                    Some("clear") => break,
+                    Some("__closed") => {
+                        reject(&cn, &ev)?;
+                    }
+                    _ => continue,
+                }
             } else {
                 println!("unknown target");
+                reject(&cn, &ev)?;
             }
         } else {
             println!("unknown req: {}", ev.response_type());
@@ -109,6 +140,20 @@ fn respond<T>(
         ev.selection(),
         ev.target(),
         ev.property(),
+    );
+
+    xcb::send_event(&cn, false, ev.requestor(), 0, &n).request_check()?;
+
+    Ok(())
+}
+
+fn reject(cn: &xcb::Connection, ev: &xcb::SelectionRequestEvent) -> Result<()> {
+    let n = xcb::SelectionNotifyEvent::new(
+        ev.time(),
+        ev.requestor(),
+        ev.selection(),
+        ev.target(),
+        xcb::NONE,
     );
 
     xcb::send_event(&cn, false, ev.requestor(), 0, &n).request_check()?;
