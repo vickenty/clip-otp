@@ -131,7 +131,11 @@ fn get_client_pid(cn: &xcb::Connection, id: u32) -> Result<u32> {
 
 fn get_client_process_name(cn: &xcb::Connection, id: u32) -> Result<String> {
     let pid = get_client_pid(&cn, id)?;
-    let proc = procfs::process::Process::new(pid as i32)?;
-    let exe = proc.exe()?;
+
+    let mut path = std::path::PathBuf::from("/proc");
+    path.push(format!("{}", pid));
+    path.push("exe");
+
+    let exe = path.read_link()?;
     Ok(exe.to_string_lossy().into_owned())
 }

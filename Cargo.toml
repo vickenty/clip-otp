@@ -8,11 +8,10 @@ edition = "2018"
 [features]
 default = [ "with_x11" ]
 with_gtk = [ "gtk", "gdk" ]
-with_x11 = [ "xcb", "procfs" ]
+with_x11 = [ "xcb" ]
 
 [dependencies]
 gtk = { version="0.9", optional=true }
 gdk = { version="0.13", optional=true }
 xcb = { version="0.9", optional=true, features = [ "res" ] }
-procfs = { version="0.8", optional=true }
 anyhow = "1"
