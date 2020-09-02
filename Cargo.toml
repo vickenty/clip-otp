@@ -1,0 +1,17 @@
+[package]
+name = "clip-otp"
+version = "0.1.0"
+license = "GPL-3.0-or-later"
+authors = ["Vickenty Fesunov <kent@setattr.net>"]
+edition = "2018"
+
+[features]
+default = [ "with_x11" ]
+with_gtk = [ "gtk", "gdk" ]
+with_x11 = [ "xcb" ]
+
+[dependencies]
+gtk = { version="0.9", optional=true }
+gdk = { version="0.13", optional=true }
+xcb = { version="0.9", optional=true }
+anyhow = "1"
