@@ -53,10 +53,12 @@ pub fn x11() -> Result<()> {
                 64,
             )
             .get_reply()?;
+
             println!(
-                "from {} ({:?}) target {:?} to {:?}",
+                "from {:x} ({:?} {:?}) target {:?} to {:?}",
                 ev.requestor(),
                 String::from_utf8_lossy(name.value()),
+                get_client_process_name(&cn, ev.requestor())?,
                 targ.name(),
                 prop.name()
             );
@@ -112,4 +114,24 @@ fn respond<T>(
     xcb::send_event(&cn, false, ev.requestor(), 0, &n).request_check()?;
 
     Ok(())
+}
+
+fn get_client_pid(cn: &xcb::Connection, id: u32) -> Result<u32> {
+    let sp = xcb::res::ClientIdSpec::new(id, xcb::res::CLIENT_ID_MASK_LOCAL_CLIENT_PID);
+    let id = xcb::res::query_client_ids(&cn, &[sp]).get_reply()?;
+
+    let pid = id
+        .ids()
+        .flat_map(|id| id.value().first().cloned())
+        .next()
+        .ok_or_else(|| anyhow::anyhow!("server did not return client window id"))?;
+
+    Ok(pid)
+}
+
+fn get_client_process_name(cn: &xcb::Connection, id: u32) -> Result<String> {
+    let pid = get_client_pid(&cn, id)?;
+    let proc = procfs::process::Process::new(pid as i32)?;
+    let exe = proc.exe()?;
+    Ok(exe.to_string_lossy().into_owned())
 }
