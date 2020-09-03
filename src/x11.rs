@@ -107,6 +107,9 @@ pub fn x11() -> Result<()> {
                 println!("unknown target");
                 reject(&cn, &ev)?;
             }
+        } else if ev.response_type() == xcb::SELECTION_CLEAR {
+            println!("selection lost");
+            break;
         } else {
             println!("unknown req: {}", ev.response_type());
         }
