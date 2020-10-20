@@ -75,10 +75,7 @@ pub fn x11() -> Result<()> {
                         break;
                     }
                     Some("clear") => break,
-                    Some("__closed") => {
-                        reject(&cn, &ev)?;
-                    }
-                    _ => continue,
+                    _ => reject(&cn, &ev)?,
                 }
             } else {
                 println!("unknown target");
@@ -186,6 +183,7 @@ fn show_notification(client_name: &str, window_name: &str) -> Result<Option<Stri
         .timeout(Timeout::Never)
         .action("share", "Share")
         .action("clear", "Clear")
+        .action("reject", "Reject")
         .show()?
         .wait_for_action(|a| action = Some(a.to_owned()));
 
