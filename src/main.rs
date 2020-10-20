@@ -3,6 +3,9 @@ use serde::Deserialize;
 
 use anyhow::Result;
 
+#[macro_use]
+mod log;
+
 #[cfg(feature = "with_x11")]
 mod x11;
 
@@ -23,10 +26,16 @@ impl Pass {
 
 fn main() -> Result<()> {
     let conf = load_conf()?;
-    println!("{:?}", conf);
+    debug!("{:?}", conf);
 
     let mut pass = Pass(Vec::new());
     std::io::stdin().read_to_end(&mut pass.0)?;
+
+    print!("Copied password to clipboard");
+    if let Some(timeout) = conf.timeout {
+        print!(", will clear after {} seconds", timeout / 1000);
+    }
+    println!(".");
 
     #[cfg(feature = "with_x11")]
     if std::env::var_os("DISPLAY").is_some() {
@@ -43,7 +52,7 @@ fn load_conf() -> Result<Conf> {
     let dirs = xdg::BaseDirectories::new()?;
     let path = dirs.place_config_file("clip-otp.toml")?;
 
-    println!("{}", path.to_string_lossy());
+    debug!("{}", path.to_string_lossy());
 
     let data = match read_to_string(&path) {
         Ok(file) => file,

@@ -71,7 +71,7 @@ pub fn x11(conf: Conf, pass: Pass) -> Result<()> {
             let window_name = get_window_name(&cn, ev.requestor())?;
             let client_name = get_client_process_name(&cn, ev.requestor())?;
 
-            println!(
+            debug!(
                 "from {:x} ({:?} {:?}) target {:?} to {:?}",
                 ev.requestor(),
                 window_name,
@@ -81,7 +81,7 @@ pub fn x11(conf: Conf, pass: Pass) -> Result<()> {
             );
 
             if prop.name().starts_with(b"META_SELECTION") {
-                println!("ignored");
+                debug!("ignored");
                 continue;
             }
 
@@ -111,14 +111,14 @@ pub fn x11(conf: Conf, pass: Pass) -> Result<()> {
                     }
                 }
             } else {
-                println!("unknown target");
+                debug!("unknown target");
                 reject(&cn, &ev)?;
             }
         } else if let Some(_ev) = xcb::SelectionClearEvent::try_cast(&cn, &ev) {
-            println!("selection lost");
+            debug!("selection lost");
             break;
         } else {
-            println!("unknown req: {}", ev.response_type());
+            debug!("unknown req: {}", ev.response_type());
         }
         cn.has_error()?;
     }
