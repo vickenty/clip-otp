@@ -29,7 +29,9 @@ pub fn x11() -> Result<()> {
     )
     .request_check()?;
 
-    let clipboard = xcb::intern_atom(&cn, true, b"CLIPBOARD").get_reply()?.atom();
+    let clipboard = xcb::intern_atom(&cn, true, b"CLIPBOARD")
+        .get_reply()?
+        .atom();
     let targets = xcb::intern_atom(&cn, true, b"TARGETS").get_reply()?.atom();
     let utf8_string = xcb::intern_atom(&cn, true, b"UTF8_STRING")
         .get_reply()?
@@ -45,7 +47,7 @@ pub fn x11() -> Result<()> {
         if let Some(ev) = xcb::SelectionRequestEvent::try_cast(&cn, &ev) {
             let targ = xcb::get_atom_name(&cn, ev.target()).get_reply()?;
             let prop = xcb::get_atom_name(&cn, ev.property()).get_reply()?;
-            let name = xcb::get_property(
+            let window_name = xcb::get_property(
                 &cn,
                 false,
                 ev.requestor(),
@@ -59,7 +61,7 @@ pub fn x11() -> Result<()> {
             println!(
                 "from {:x} ({:?} {:?}) target {:?} to {:?}",
                 ev.requestor(),
-                String::from_utf8_lossy(name.value()),
+                String::from_utf8_lossy(window_name.value()),
                 get_client_process_name(&cn, ev.requestor())?,
                 targ.name(),
                 prop.name()
@@ -73,26 +75,12 @@ pub fn x11() -> Result<()> {
             if ev.target() == targets {
                 respond(&cn, &ev, xcb::ATOM_ATOM, 32, &[utf8_string])?;
             } else if ev.target() == utf8_string || ev.target() == text_plain {
-                let mut action = None;
+                let action = show_notification(
+                    &get_client_process_name(&cn, ev.requestor())?,
+                    &String::from_utf8_lossy(window_name.value()),
+                )?;
 
-                Notification::new()
-                    .summary("Clip Otp")
-                    .body(&format!(
-                        "Share password in clipboard with\n{:?} ({:?})",
-                        get_client_process_name(&cn, ev.requestor())?,
-                        String::from_utf8_lossy(name.value())
-                    ))
-                    .icon("dialog-password")
-                    .sound_name("window-attention-active")
-                    .urgency(notify_rust::Urgency::Critical)
-                    .timeout(Timeout::Never)
-                    .action("share", "Share")
-                    .action("clear", "Clear")
-                    .show()?
-                    .wait_for_action(|a| action = Some(a.to_owned()));
-
-                let action = action.as_ref().map(|s| &s[..]);
-                match action {
+                match action.as_deref() {
                     Some("share") => {
                         respond(&cn, &ev, ev.target(), 8, b"Hello world")?;
                         break;
@@ -186,4 +174,25 @@ fn get_client_process_name(cn: &xcb::Connection, id: u32) -> Result<String> {
 
     let exe = path.read_link()?;
     Ok(exe.to_string_lossy().into_owned())
+}
+
+fn show_notification(client_name: &str, window_name: &str) -> Result<Option<String>> {
+    let mut action = None;
+
+    Notification::new()
+        .summary("Clip Otp")
+        .body(&format!(
+            "Share password in clipboard with\n{:?} ({:?})",
+            client_name, window_name,
+        ))
+        .icon("dialog-password")
+        .sound_name("window-attention-active")
+        .urgency(notify_rust::Urgency::Critical)
+        .timeout(Timeout::Never)
+        .action("share", "Share")
+        .action("clear", "Clear")
+        .show()?
+        .wait_for_action(|a| action = Some(a.to_owned()));
+
+    Ok(action)
 }
