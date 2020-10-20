@@ -11,5 +11,8 @@ with_x11 = [ "xcb" ]
 
 [dependencies]
 xcb = { git="https://github.com/vickenty/rust-xcb", optional=true, features = [ "res" ] }
+xdg = { version="2" }
+toml = "0.5"
+serde = { version="1", features = [ "derive" ] }
 anyhow = "1"
 notify-rust = "4"

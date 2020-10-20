@@ -4,7 +4,9 @@ use notify_rust::{Notification, Timeout};
 
 use xcb::Event;
 
-pub fn x11() -> Result<()> {
+use crate::Conf;
+
+pub fn x11(conf: Conf) -> Result<()> {
     let (cn, screen) = xcb::Connection::connect(None)?;
     let screen = cn
         .get_setup()
@@ -43,7 +45,10 @@ pub fn x11() -> Result<()> {
 
     xcb::set_selection_owner(&cn, wid, clipboard, xcb::CURRENT_TIME).request_check()?;
 
-    let reject_list = &mut Vec::new();
+    let Conf {
+        accept_list,
+        mut reject_list,
+    } = conf;
 
     while let Some(ev) = cn.wait_for_event() {
         if let Some(ev) = xcb::SelectionRequestEvent::try_cast(&cn, &ev) {
@@ -74,7 +79,11 @@ pub fn x11() -> Result<()> {
                     continue;
                 }
 
-                let action = show_notification(&client_name, &window_name)?;
+                let action = if accept_list.contains(&client_name) {
+                    Some("share".into())
+                } else {
+                    show_notification(&client_name, &window_name)?
+                };
 
                 match action.as_deref() {
                     Some("share") => {
