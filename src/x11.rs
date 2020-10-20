@@ -47,24 +47,16 @@ pub fn x11() -> Result<()> {
         if let Some(ev) = xcb::SelectionRequestEvent::try_cast(&cn, &ev) {
             let targ = xcb::get_atom_name(&cn, ev.target()).get_reply()?;
             let prop = xcb::get_atom_name(&cn, ev.property()).get_reply()?;
-            let window_name = xcb::get_property(
-                &cn,
-                false,
-                ev.requestor(),
-                xcb::ATOM_WM_NAME,
-                xcb::ATOM_ANY,
-                0,
-                64,
-            )
-            .get_reply()?;
+            let window_name = get_window_name(&cn, ev.requestor())?;
+            let client_name = get_client_process_name(&cn, ev.requestor())?;
 
             println!(
                 "from {:x} ({:?} {:?}) target {:?} to {:?}",
                 ev.requestor(),
-                String::from_utf8_lossy(window_name.value()),
-                get_client_process_name(&cn, ev.requestor())?,
-                targ.name(),
-                prop.name()
+                window_name,
+                client_name,
+                String::from_utf8_lossy(targ.name()),
+                String::from_utf8_lossy(prop.name()),
             );
 
             if prop.name().starts_with(b"META_SELECTION") {
@@ -75,10 +67,7 @@ pub fn x11() -> Result<()> {
             if ev.target() == targets {
                 respond(&cn, &ev, xcb::ATOM_ATOM, 32, &[utf8_string])?;
             } else if ev.target() == utf8_string || ev.target() == text_plain {
-                let action = show_notification(
-                    &get_client_process_name(&cn, ev.requestor())?,
-                    &String::from_utf8_lossy(window_name.value()),
-                )?;
+                let action = show_notification(&client_name, &window_name)?;
 
                 match action.as_deref() {
                     Some("share") => {
@@ -174,6 +163,12 @@ fn get_client_process_name(cn: &xcb::Connection, id: u32) -> Result<String> {
 
     let exe = path.read_link()?;
     Ok(exe.to_string_lossy().into_owned())
+}
+
+fn get_window_name(cn: &xcb::Connection, window: xcb::Window) -> Result<String> {
+    let v = xcb::get_property(&cn, false, window, xcb::ATOM_WM_NAME, xcb::ATOM_ANY, 0, 64)
+        .get_reply()?;
+    Ok(String::from_utf8_lossy(v.value()).into_owned())
 }
 
 fn show_notification(client_name: &str, window_name: &str) -> Result<Option<String>> {
