@@ -1,8 +1,14 @@
+use std::{
+    convert::TryInto,
+    time::{Duration, Instant},
+};
+
 use anyhow::Result;
-
 use notify_rust::{Notification, Timeout};
-
 use xcb::Event;
+
+#[path = "poll.rs"]
+mod poll;
 
 use crate::Conf;
 
@@ -48,9 +54,16 @@ pub fn x11(conf: Conf) -> Result<()> {
     let Conf {
         accept_list,
         mut reject_list,
+        timeout,
     } = conf;
 
-    while let Some(ev) = cn.wait_for_event() {
+    let timeout = timeout.map(|tm| {
+        Instant::now()
+            .checked_add(Duration::from_millis(tm))
+            .unwrap()
+    });
+
+    while let Some(ev) = wait_for_event(&cn, &timeout)? {
         if let Some(ev) = xcb::SelectionRequestEvent::try_cast(&cn, &ev) {
             let targ = xcb::get_atom_name(&cn, ev.target()).get_reply()?;
             let prop = xcb::get_atom_name(&cn, ev.property()).get_reply()?;
@@ -207,4 +220,26 @@ fn show_notification(client_name: &str, window_name: &str) -> Result<Option<Stri
         .wait_for_action(|a| action = Some(a.to_owned()));
 
     Ok(action)
+}
+
+fn wait_for_event(
+    cn: &xcb::Connection,
+    timeout: &Option<Instant>,
+) -> Result<Option<xcb::GenericEvent>> {
+    if let Some(timeout) = timeout {
+        loop {
+            match cn.poll_for_event() {
+                Some(ev) => return Ok(Some(ev)),
+                None => {
+                    let rem = match timeout.checked_duration_since(Instant::now()) {
+                        Some(d) => d.as_millis().try_into().unwrap_or(i32::MAX),
+                        None => return Ok(None),
+                    };
+                    poll::wait_with_timeout(cn, rem)?;
+                }
+            }
+        }
+    } else {
+        Ok(cn.wait_for_event())
+    }
 }

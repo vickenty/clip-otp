@@ -10,6 +10,7 @@ mod x11;
 pub struct Conf {
     pub accept_list: Vec<String>,
     pub reject_list: Vec<String>,
+    pub timeout: Option<u64>,
 }
 
 fn main() -> Result<()> {
