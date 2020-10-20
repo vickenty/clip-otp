@@ -10,6 +10,6 @@ default = [ "with_x11" ]
 with_x11 = [ "xcb" ]
 
 [dependencies]
-xcb = { version="0.9", optional=true, features = [ "res" ] }
+xcb = { git="https://github.com/vickenty/rust-xcb", optional=true, features = [ "res" ] }
 anyhow = "1"
 notify-rust = "4"

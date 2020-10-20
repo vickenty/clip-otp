@@ -2,6 +2,8 @@ use anyhow::Result;
 
 use notify_rust::{Notification, Timeout};
 
+use xcb::Event;
+
 pub fn x11() -> Result<()> {
     let (cn, screen) = xcb::Connection::connect(None)?;
     let screen = cn
@@ -27,22 +29,20 @@ pub fn x11() -> Result<()> {
     )
     .request_check()?;
 
-    let clipboard = xcb::intern_atom(&cn, true, "CLIPBOARD").get_reply()?.atom();
-    let targets = xcb::intern_atom(&cn, true, "TARGETS").get_reply()?.atom();
-    let utf8_string = xcb::intern_atom(&cn, true, "UTF8_STRING")
+    let clipboard = xcb::intern_atom(&cn, true, b"CLIPBOARD").get_reply()?.atom();
+    let targets = xcb::intern_atom(&cn, true, b"TARGETS").get_reply()?.atom();
+    let utf8_string = xcb::intern_atom(&cn, true, b"UTF8_STRING")
         .get_reply()?
         .atom();
     // TODO: Where this target is specified?
-    let text_plain = xcb::intern_atom(&cn, true, "text/plain;charset=utf-8")
+    let text_plain = xcb::intern_atom(&cn, true, b"text/plain;charset=utf-8")
         .get_reply()?
         .atom();
 
     xcb::set_selection_owner(&cn, wid, clipboard, xcb::CURRENT_TIME).request_check()?;
 
     while let Some(ev) = cn.wait_for_event() {
-        if ev.response_type() == xcb::SELECTION_REQUEST {
-            let ev: &xcb::SelectionRequestEvent = unsafe { xcb::cast_event(&ev) };
-
+        if let Some(ev) = xcb::SelectionRequestEvent::try_cast(&cn, &ev) {
             let targ = xcb::get_atom_name(&cn, ev.target()).get_reply()?;
             let prop = xcb::get_atom_name(&cn, ev.property()).get_reply()?;
             let name = xcb::get_property(
@@ -65,7 +65,7 @@ pub fn x11() -> Result<()> {
                 prop.name()
             );
 
-            if prop.name().starts_with("META_SELECTION") {
+            if prop.name().starts_with(b"META_SELECTION") {
                 println!("ignored");
                 continue;
             }
@@ -107,7 +107,7 @@ pub fn x11() -> Result<()> {
                 println!("unknown target");
                 reject(&cn, &ev)?;
             }
-        } else if ev.response_type() == xcb::SELECTION_CLEAR {
+        } else if let Some(_ev) = xcb::SelectionClearEvent::try_cast(&cn, &ev) {
             println!("selection lost");
             break;
         } else {

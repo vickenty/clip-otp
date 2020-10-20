@@ -397,8 +397,7 @@ dependencies = [
 [[package]]
 name = "xcb"
 version = "0.9.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "62056f63138b39116f82a540c983cc11f1c90cd70b3d492a70c25eaa50bd22a6"
+source = "git+https://github.com/vickenty/rust-xcb#0234a2a54939cedb52839b962d77e914122142f8"
 dependencies = [
  "libc",
  "log",
