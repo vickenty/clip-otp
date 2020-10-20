@@ -1,4 +1,4 @@
-use std::{fs::read_to_string, io::ErrorKind};
+use std::{fs::read_to_string, io::{ErrorKind, Read}};
 use serde::Deserialize;
 
 use anyhow::Result;
@@ -13,13 +13,24 @@ pub struct Conf {
     pub timeout: Option<u64>,
 }
 
+pub struct Pass(Vec<u8>);
+
+impl Pass {
+    fn unlock(&self) -> &[u8] {
+        &self.0
+    }
+}
+
 fn main() -> Result<()> {
     let conf = load_conf()?;
     println!("{:?}", conf);
 
+    let mut pass = Pass(Vec::new());
+    std::io::stdin().read_to_end(&mut pass.0)?;
+
     #[cfg(feature = "with_x11")]
     if std::env::var_os("DISPLAY").is_some() {
-        x11::x11(conf)?;
+        x11::x11(conf, pass)?;
         return Ok(());
     }
 

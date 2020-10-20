@@ -7,12 +7,13 @@ use anyhow::Result;
 use notify_rust::{Notification, Timeout};
 use xcb::Event;
 
+use crate::{Conf, Pass};
+
 #[path = "poll.rs"]
 mod poll;
 
-use crate::Conf;
 
-pub fn x11(conf: Conf) -> Result<()> {
+pub fn x11(conf: Conf, pass: Pass) -> Result<()> {
     let (cn, screen) = xcb::Connection::connect(None)?;
     let screen = cn
         .get_setup()
@@ -100,7 +101,7 @@ pub fn x11(conf: Conf) -> Result<()> {
 
                 match action.as_deref() {
                     Some("share") => {
-                        respond(&cn, &ev, ev.target(), 8, b"Hello world")?;
+                        respond(&cn, &ev, ev.target(), 8, pass.unlock())?;
                         break;
                     }
                     Some("clear") => break,
