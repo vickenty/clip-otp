@@ -43,6 +43,8 @@ pub fn x11() -> Result<()> {
 
     xcb::set_selection_owner(&cn, wid, clipboard, xcb::CURRENT_TIME).request_check()?;
 
+    let reject_list = &mut Vec::new();
+
     while let Some(ev) = cn.wait_for_event() {
         if let Some(ev) = xcb::SelectionRequestEvent::try_cast(&cn, &ev) {
             let targ = xcb::get_atom_name(&cn, ev.target()).get_reply()?;
@@ -67,6 +69,11 @@ pub fn x11() -> Result<()> {
             if ev.target() == targets {
                 respond(&cn, &ev, xcb::ATOM_ATOM, 32, &[utf8_string])?;
             } else if ev.target() == utf8_string || ev.target() == text_plain {
+                if reject_list.contains(&client_name) {
+                    reject(&cn, &ev)?;
+                    continue;
+                }
+
                 let action = show_notification(&client_name, &window_name)?;
 
                 match action.as_deref() {
@@ -75,7 +82,10 @@ pub fn x11() -> Result<()> {
                         break;
                     }
                     Some("clear") => break,
-                    _ => reject(&cn, &ev)?,
+                    _ => {
+                        reject(&cn, &ev)?;
+                        reject_list.push(client_name.clone());
+                    }
                 }
             } else {
                 println!("unknown target");
