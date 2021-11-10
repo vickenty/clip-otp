@@ -1,12 +1,13 @@
-use std::{fs::read_to_string, io::{ErrorKind, Read}};
 use serde::Deserialize;
+use std::{
+    fs::read_to_string,
+    io::{ErrorKind, Read},
+};
 
 use anyhow::Result;
 
 #[macro_use]
 mod log;
-
-#[cfg(feature = "with_x11")]
 mod x11;
 
 #[derive(Default, Debug, Deserialize)]
@@ -37,7 +38,6 @@ fn main() -> Result<()> {
     }
     println!(".");
 
-    #[cfg(feature = "with_x11")]
     if std::env::var_os("DISPLAY").is_some() {
         x11::x11(conf, pass)?;
         return Ok(());

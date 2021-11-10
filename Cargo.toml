@@ -5,12 +5,8 @@ license = "GPL-3.0-or-later"
 authors = ["Vickenty Fesunov <kent@setattr.net>"]
 edition = "2018"
 
-[features]
-default = [ "with_x11" ]
-with_x11 = [ "xcb" ]
-
 [dependencies]
-xcb = { git="https://github.com/vickenty/rust-xcb", optional=true, features = [ "res" ] }
+x11rb = { version="0.9", features = [ "res" ] }
 xdg = { version="2" }
 toml = "0.5"
 serde = { version="1", features = [ "derive" ] }
